@@ -22,6 +22,12 @@ const sendMessage = async (req, res) => {
       page.click('input[name="login"]'),
     ]);
 
+    const loginFailed = await page.$("div#login_error");
+    if (loginFailed) {
+      res.status(200).send({ message: "Login Failed" });
+      return;
+    }
+
     for (let i = 0; i < users.length; i += 2) {
       for (let j = i; j < i + 2 && j < users.length; j++) {
         const user = users[j];
@@ -81,7 +87,6 @@ const sendMessage = async (req, res) => {
 
     res.status(200).send({ message: "Message sent successfully" });
   } catch (error) {
-    console.log("Error logging in: ", error);
     res.status(500).send({ message: "Failed to send message", error: error });
   } finally {
     console.log("Request Completed");
