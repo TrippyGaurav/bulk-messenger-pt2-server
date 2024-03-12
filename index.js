@@ -1,17 +1,15 @@
 const express = require("express");
 const healthCheckRoute = require("./src/routes/healthRoute");
 const messengerRoute = require("./src/routes/messengerRoute");
-const authRouter = require("./src/routes/authRoute");
-
 require("dotenv").config();
 const cors = require("cors");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 app.use("/api/", messengerRoute);
-app.use("/api/auth", authRouter);
 app.use("/", healthCheckRoute);
 
 app.listen(3001, () => {

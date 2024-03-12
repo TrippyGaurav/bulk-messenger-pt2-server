@@ -1,97 +1,137 @@
 const puppeteer = require("puppeteer");
-const pool = require("../utlis/db");
+const { pool } = require("../utlis/db");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+const queries = require("../utlis/queries");
+
+const checkTableExists = async (database) => {
+  const query = `SELECT to_regclass('public.${database}')`;
+  const { rows } = await pool.query(query);
+  return rows[0].to_regclass !== null;
+};
+
+const sentMessage = async (user, message, status, fbUsername, username) => {
+  await pool.query(queries.addMessage, [
+    user,
+    message,
+    status,
+    fbUsername,
+    username,
+  ]);
+};
 
 const sendMessage = async (req, res) => {
   const { message, userIds, fbUsername, fbPassword } = req.body;
   const users = userIds.split(",");
-  console.log("Request started");
-  let browser;
+
+  const token = req.headers.authorization.split(" ")[1];
+  // Verify the token
+
   try {
-    browser = await puppeteer.launch({ headless: false });
-    const page = await browser.newPage();
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    // Access the user information from the decoded token
+    const userId = decodedToken.id;
+    const username = decodedToken.username;
 
-    // Navigate to Facebook login Page
-    await page.goto("https://mbasic.facebook.com/");
+    console.log("USER NAME : ", username);
 
-    // Fill in login credentials (consider using environment variables)
-    await page.type('input[name="email"]', fbUsername); // Use environment variable
-    await page.type('input[name="pass"]', fbPassword); // Use environment variable
+    let browser;
+    try {
+      browser = await puppeteer.launch({ headless: false });
+      const page = await browser.newPage();
 
-    await Promise.all([
-      page.waitForNavigation(),
-      page.click('input[name="login"]'),
-    ]);
+      // Navigate to Facebook login Page
+      await page.goto("https://mbasic.facebook.com/");
 
-    const loginFailed = await page.$("div#login_error");
-    if (loginFailed) {
-      res.status(200).send({ message: "Login Failed" });
-      return;
-    }
+      // Fill in login credentials (consider using environment variables)
+      await page.type('input[name="email"]', fbUsername); // Use environment variable
+      await page.type('input[name="pass"]', fbPassword); // Use environment variable
 
-    for (let i = 0; i < users.length; i += 2) {
-      for (let j = i; j < i + 2 && j < users.length; j++) {
-        const user = users[j];
-        try {
-          await page.goto(`https://mbasic.facebook.com/${user}`);
-          // Wait for the page to load
-          await page.waitForSelector('a[href*="messages/thread"]');
+      await Promise.all([
+        page.waitForNavigation(),
+        page.click('input[name="login"]'),
+      ]);
 
-          // Extract the href attribute of the link
-          const messageLink = await page.$('a[href*="messages/thread"]');
-          const href = await messageLink.getProperty("href");
-          const hrefValue = await href.jsonValue();
+      const loginFailed = await page.$("div#login_error");
+      if (loginFailed) {
+        res.status(200).send({ message: "Login Failed" });
+        return;
+      }
 
-          // Navigate to the extracted link
-          await page.goto(hrefValue);
-
-          await page.type('textarea[name="body"]', message);
-
+      for (let i = 0; i < users.length; i += 2) {
+        for (let j = i; j < i + 2 && j < users.length; j++) {
+          const user = users[j];
           try {
-            await Promise.all([
-              page.waitForNavigation(),
-              page.click('input[name="send"]'),
-            ]);
+            await page.goto(`https://mbasic.facebook.com/${user}`);
+            // Wait for the page to load
+            await page.waitForSelector('a[href*="messages/thread"]');
+
+            // Extract the href attribute of the link
+            const messageLink = await page.$('a[href*="messages/thread"]');
+            const href = await messageLink.getProperty("href");
+            const hrefValue = await href.jsonValue();
+
+            // Navigate to the extracted link
+            await page.goto(hrefValue);
+
+            await page.type('textarea[name="body"]', message);
+
+            try {
+              await Promise.all([
+                page.waitForNavigation(),
+                page.click('input[name="send"]'),
+              ]);
+            } catch (error) {
+              await Promise.all([
+                page.waitForNavigation(),
+                page.click('input[name="Send"]'),
+              ]);
+            }
+
+            console.log({
+              sent: user,
+              message: "success",
+              time: new Date().toISOString(),
+            });
+
+            const tableExists = await checkTableExists("messages");
+            if (tableExists) {
+              sentMessage(user, message, "success", fbUsername, username);
+            } else {
+              console.log("Table not exists");
+              await pool.query(queries.createMessageTable);
+              sentMessage(user, message, "success", fbUsername, username);
+            }
           } catch (error) {
-            await Promise.all([
-              page.waitForNavigation(),
-              page.click('input[name="Send"]'),
-            ]);
+            console.log(error.message);
+            sentMessage(user, message, "failed", fbUsername, username);
+            continue;
           }
+        }
 
-          console.log({
-            sent: user,
-            message: "success",
-            time: new Date().toISOString(),
-          });
-
-          await pool.query(
-            "INSERT INTO users (user_id, message, status) VALUES ($1, $2, $3)",
-            [user, message, "success"]
-          );
-        } catch (error) {
-          console.log(error.message);
-          await pool.query(
-            "INSERT INTO users (user_id, message, status) VALUES ($1, $2, $3)",
-            [user, error.message, "failed"]
-          );
-          continue;
+        // If not all users have been processed, wait for 30 seconds before proceeding
+        if (i + 2 < users.length) {
+          console.log("Secheduled next 2 after 1mins");
+          await new Promise((resolve) => setTimeout(resolve, 60000));
         }
       }
 
-      // If not all users have been processed, wait for 30 seconds before proceeding
-      if (i + 2 < users.length) {
-        console.log("Secheduled next 2 after 1mins");
-        await new Promise((resolve) => setTimeout(resolve, 60000));
+      res.status(200).send({ message: "Message sent successfully" });
+    } catch (error) {
+      res.status(500).send({ message: "Failed to send message", error: error });
+    } finally {
+      console.log("Request Completed");
+      if (browser) {
+        await browser.close();
       }
     }
-
-    res.status(200).send({ message: "Message sent successfully" });
   } catch (error) {
-    res.status(500).send({ message: "Failed to send message", error: error });
-  } finally {
-    console.log("Request Completed");
-    if (browser) {
-      await browser.close();
+    if (error instanceof jwt.TokenExpiredError) {
+      // Token has expired, handle appropriately
+      res.status(401).json({ error: "Token expired. Please log in again." });
+    } else {
+      // Other JWT verification errors
+      res.status(401).json({ error: "Invalid token." });
     }
   }
 };
