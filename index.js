@@ -1,6 +1,7 @@
 const express = require("express");
 const healthCheckRoute = require("./src/routes/healthRoute");
 const messengerRoute = require("./src/routes/messengerRoute");
+
 require("dotenv").config();
 const cors = require("cors");
 

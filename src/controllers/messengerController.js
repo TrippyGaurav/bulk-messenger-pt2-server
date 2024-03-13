@@ -24,6 +24,13 @@ const sendMessage = async (req, res) => {
   const { message, userIds, fbUsername, fbPassword } = req.body;
   const users = userIds.split(",");
 
+  if (!req.headers.authorization) {
+    return res.status(401).json({
+      success: false,
+      message: "Authorization token is missing. Please log in first.",
+    });
+  }
+
   const token = req.headers.authorization.split(" ")[1];
   // Verify the token
 
@@ -94,6 +101,14 @@ const sendMessage = async (req, res) => {
               time: new Date().toISOString(),
             });
 
+            const facebookIdsTable = await checkTableExists("facebookIds");
+            if (facebookIdsTable) {
+              pool.query(queries.addFacebookId, [fbUsername, username]);
+            } else {
+              await pool.query(queries.createfacebookIdsTable);
+              pool.query(queries.addFacebookId, [fbUsername, username]);
+            }
+
             const tableExists = await checkTableExists("messages");
             if (tableExists) {
               sentMessage(user, message, "success", fbUsername, username);
@@ -136,4 +151,17 @@ const sendMessage = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage };
+const getAllMessages = async (req, res) => {
+  try {
+    const messages = await pool.query(queries.getAllMessages);
+    res.status(200).json({ success: true, data: messages.rows });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ success: false, error: "Error fetching messages" });
+  }
+};
+
+module.exports = {
+  sendMessage,
+  getAllMessages,
+};

@@ -1,6 +1,5 @@
 CREATE DATABASE bulk_messenger;
 
-CREATE TYPE message_status AS ENUM ('pending', 'success', 'failed');
 
 CREATE TABLE messages (
     id SERIAL PRIMARY KEY,
@@ -12,15 +11,19 @@ CREATE TABLE messages (
     agent VARCHAR(255) NOT NULL REFERENCES users(username)
 );
 
-
 CREATE TABLE users(
-    id SERIAL,
+    id SERIAL NOT NULL,
     username VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL DEFAULT 'agent'
+    status VARCHAR(20) NOT NULL DEFAULT 'inactive',
+    role VARCHAR(20) NOT NULL DEFAULT 'agent'
 );
 
+CREATE TABLE facebookIds(
+    id VARCHAR(255) PRIMARY KEY,
+    assigned_to VARCHAR(255) NOT NULL REFERENCES users(username)
+);
 
 SELECT EXISTS (
     SELECT 1

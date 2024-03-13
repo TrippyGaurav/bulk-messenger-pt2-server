@@ -4,20 +4,23 @@ const queries = require("../utlis/queries");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-const checkDBExists = async (database) => {
-  const query = `SELECT datname FROM pg_database WHERE datname = $1`;
-  const { rows } = await pool.query(query, [database]);
-  return rows.length > 0;
-};
-
 const checkTableExists = async (database) => {
   const query = `SELECT to_regclass('public.${database}')`;
   const { rows } = await pool.query(query);
   return rows[0].to_regclass !== null;
 };
 
+const checkKeyExist = async (key) => {
+  const result = await pool.query("SELECT * FROM keys WHERE key = $1", [key]);
+  if (result.rowCount === 0) {
+    return false;
+  }
+  return true;
+};
+
 const registerUser = async (req, res) => {
   const { username, name, password, role } = req.body;
+
   const errors = [];
 
   if (!username || !name || !password) {
@@ -33,12 +36,22 @@ const registerUser = async (req, res) => {
   }
 
   try {
-    const dbExists = await checkDBExists("users");
-    const tableExists = await checkTableExists("users");
+    if (role === "admin") {
+      if (!req.headers.authorization) {
+        errors.push({ message: "Authorization token is missing" });
+        return res.status(401).json({ errors });
+      }
 
-    if (!dbExists) {
-      await pool.query(queries.createDB);
+      const token = req.headers.authorization.split(" ")[1];
+      const keyExists = await checkKeyExist(token);
+
+      if (!keyExists) {
+        errors.push({ message: "Invalid key" });
+        return res.status(401).json({ errors });
+      }
     }
+
+    const tableExists = await checkTableExists("users");
 
     if (!tableExists) {
       await pool.query(queries.createUsersTable);
@@ -59,13 +72,14 @@ const registerUser = async (req, res) => {
       username,
       name,
       hashedPassword,
+      "active",
       role,
     ]);
 
-    res.json({ message: "User registered successfully" });
+    return res.json({ message: "User registered successfully" });
   } catch (error) {
     console.log("Error registering user : ", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
