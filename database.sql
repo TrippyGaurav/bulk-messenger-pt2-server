@@ -17,7 +17,9 @@ CREATE TABLE users(
     name VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'inactive',
-    role VARCHAR(20) NOT NULL DEFAULT 'agent'
+    role VARCHAR(20) NOT NULL DEFAULT 'agent',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
 );
 
 CREATE TABLE facebookIds(
