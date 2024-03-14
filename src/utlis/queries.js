@@ -9,8 +9,6 @@ const getAllMessages = "SELECT * FROM messages";
 const createUsersTable =
   "CREATE TABLE users( id SERIAL NOT NULL, username VARCHAR(255) PRIMARY KEY, name VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'inactive', role VARCHAR(20) NOT NULL DEFAULT 'agent');";
 
-const getUserByUsername = "SELECT * FROM users WHERE username = $1";
-
 const addNewUser =
   "INSERT INTO users (username, name, password, status, role) VALUES($1, $2, $3, $4, $5) RETURNING username, password, role";
 
@@ -20,6 +18,37 @@ const createfacebookIdsTable =
 const addFacebookId =
   "INSERT INTO facebook_Ids (id, assigned_to) VALUES($1, $2)";
 
+const facebookIfEntryExits =
+  "SELECT * FROM facebook_Ids WHERE assigned_to = $1";
+
+const checkForAdmin =
+  "SELECT role FROM users WHERE username = $1 AND role = 'admin'";
+
+const deleteAgent =
+  "DELETE FROM users WHERE username = $1 AND role='agent' RETURNING *";
+
+const checkUserExist = "SELECT * FROM users WHERE username = $1";
+
+const updateUserName =
+  "UPDATE users SET name = $1 WHERE username = $2 AND role='agent'";
+
+const updateUserPassword =
+  "UPDATE users SET password = $1 WHERE username = $2 AND role='agent'";
+
+const updateUserStatus =
+  "UPDATE users SET status = $1 WHERE username = $2 AND role='agent'";
+
+const getAllUsers = "SELECT * FROM users";
+
+const getUserByUsername = "SELECT * FROM users WHERE username = $1";
+
+const getAllAgents = "SELECT * FROM users WHERE role='agent'";
+
+const getAgentByUsername =
+  "SELECT * FROM users WHERE username = $1 AND role='agent'";
+
+const getAllMessagesByUsername = "SELECT * FROM messages WHERE agent = $1";
+
 module.exports = {
   addMessage,
   createMessageTable,
@@ -28,5 +57,16 @@ module.exports = {
   getUserByUsername,
   addNewUser,
   addFacebookId,
-  createfacebookIdsTable
+  createfacebookIdsTable,
+  facebookIfEntryExits,
+  checkForAdmin,
+  deleteAgent,
+  checkUserExist,
+  updateUserName,
+  updateUserPassword,
+  updateUserStatus,
+  getAllUsers,
+  getAllAgents,
+  getAgentByUsername,
+  getAllMessagesByUsername,
 };

@@ -29,6 +29,8 @@ const sendMessage = async (req, res) => {
 
   try {
     const facebookIdsTable = await checkTableExists("facebook_Ids");
+    const tableExists = await checkTableExists("messages");
+
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
     // Access the user information from the decoded token
     const userId = decodedToken.id;
@@ -96,13 +98,26 @@ const sendMessage = async (req, res) => {
             });
 
             if (facebookIdsTable) {
-              pool.query(queries.addFacebookId, [fbUsername, username]);
+              const entryExits = await pool.query(
+                queries.facebookIfEntryExits,
+                [username]
+              );
+
+              if (entryExits.rowCount <= 0) {
+                await pool.query(queries.addFacebookId, [fbUsername, username]);
+              }
             } else {
               await pool.query(queries.createfacebookIdsTable);
-              pool.query(queries.addFacebookId, [fbUsername, username]);
+              const entryExits = await pool.query(
+                queries.facebookIfEntryExits,
+                [username]
+              );
+
+              if (entryExits.rowCount <= 0) {
+                await pool.query(queries.addFacebookId, [fbUsername, username]);
+              }
             }
 
-            const tableExists = await checkTableExists("messages");
             if (tableExists) {
               sentMessage(user, message, "success", fbUsername, username);
             } else {
@@ -150,11 +165,29 @@ const getAllMessages = async (req, res) => {
     res.status(200).json({ success: true, data: messages.rows });
   } catch (error) {
     console.error("Error fetching messages:", error);
-    res.status(500).json({ success: false, error: "Error fetching messages" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching messages" });
+  }
+};
+
+const getAllMessagesByUsername = async (req, res) => {
+  try {
+    const { agent } = req.params;
+    const { rows } = await pool.query(queries.getAllMessagesByUsername, [
+      agent,
+    ]);
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching messages" });
   }
 };
 
 module.exports = {
   sendMessage,
   getAllMessages,
+  getAllMessagesByUsername,
 };
