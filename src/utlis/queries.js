@@ -15,10 +15,10 @@ const addNewUser =
   "INSERT INTO users (username, name, password, status, role) VALUES($1, $2, $3, $4, $5) RETURNING username, password, role";
 
 const createfacebookIdsTable =
-  "CREATE TABLE facebookIds( id VARCHAR(255) PRIMARY KEY, assigned_to VARCHAR(255) NOT NULL REFERENCES users(username));";
+  "CREATE TABLE facebook_Ids( id VARCHAR(255) PRIMARY KEY, assigned_to VARCHAR(255) NOT NULL REFERENCES users(username));";
 
 const addFacebookId =
-  "INSERT INTO facebookIds (id, assigned_to) VALUES($1, $2)";
+  "INSERT INTO facebook_Ids (id, assigned_to) VALUES($1, $2)";
 
 module.exports = {
   addMessage,

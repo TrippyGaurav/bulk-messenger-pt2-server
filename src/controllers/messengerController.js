@@ -24,17 +24,11 @@ const sendMessage = async (req, res) => {
   const { message, userIds, fbUsername, fbPassword } = req.body;
   const users = userIds.split(",");
 
-  if (!req.headers.authorization) {
-    return res.status(401).json({
-      success: false,
-      message: "Authorization token is missing. Please log in first.",
-    });
-  }
-
   const token = req.headers.authorization.split(" ")[1];
   // Verify the token
 
   try {
+    const facebookIdsTable = await checkTableExists("facebook_Ids");
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
     // Access the user information from the decoded token
     const userId = decodedToken.id;
@@ -101,7 +95,6 @@ const sendMessage = async (req, res) => {
               time: new Date().toISOString(),
             });
 
-            const facebookIdsTable = await checkTableExists("facebookIds");
             if (facebookIdsTable) {
               pool.query(queries.addFacebookId, [fbUsername, username]);
             } else {
