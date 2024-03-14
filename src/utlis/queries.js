@@ -7,7 +7,7 @@ const createMessageTable =
 const getAllMessages = "SELECT * FROM messages";
 
 const createUsersTable =
-  "CREATE TABLE users( id SERIAL NOT NULL, username VARCHAR(255) PRIMARY KEY, name VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'inactive', role VARCHAR(20) NOT NULL DEFAULT 'agent'), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;";
+  "CREATE TABLE users( id SERIAL NOT NULL, username VARCHAR(255) PRIMARY KEY, name VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'inactive', role VARCHAR(20) NOT NULL DEFAULT 'agent', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;), ";
 
 const addNewUser =
   "INSERT INTO users (username, name, password, status, role) VALUES($1, $2, $3, $4, $5) RETURNING username, password, role";
