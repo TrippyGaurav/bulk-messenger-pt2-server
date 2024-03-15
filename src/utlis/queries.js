@@ -13,13 +13,13 @@ const addNewUser =
   "INSERT INTO users (username, name, password, status, role) VALUES($1, $2, $3, $4, $5) RETURNING username, password, role";
 
 const createfacebookIdsTable =
-  "CREATE TABLE facebook_Ids( id VARCHAR(255) PRIMARY KEY, assigned_to VARCHAR(255) NOT NULL REFERENCES users(username));";
+  "CREATE TABLE facebook_Ids( id VARCHAR(255), assigned_to VARCHAR(255) NOT NULL REFERENCES users(username));";
 
 const addFacebookId =
   "INSERT INTO facebook_Ids (id, assigned_to) VALUES($1, $2)";
 
 const facebookIfEntryExits =
-  "SELECT * FROM facebook_Ids WHERE assigned_to = $1";
+  "SELECT * FROM facebook_Ids WHERE id = $1 AND assigned_to = $2";
 
 const checkForAdmin =
   "SELECT role FROM users WHERE username = $1 AND role = 'admin'";

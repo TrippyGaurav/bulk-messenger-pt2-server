@@ -48,6 +48,7 @@ const sendMessage = async (req, res) => {
 
     if (facebookIdsTable) {
       const entryExits = await pool.query(queries.facebookIfEntryExits, [
+        fbUsername,
         username,
       ]);
 
@@ -57,6 +58,7 @@ const sendMessage = async (req, res) => {
     } else {
       await pool.query(queries.createfacebookIdsTable);
       const entryExits = await pool.query(queries.facebookIfEntryExits, [
+        fbUsername,
         username,
       ]);
 
