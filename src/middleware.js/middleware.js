@@ -21,6 +21,33 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const isAdmin = async (req, res, next) => {
+  try {
+    if (!req.headers.authorization) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token is missing.",
+      });
+    }
 
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const admin = decodedToken.username;
+    const checkForAdmin = await pool.query(queries.checkForAdmin, [admin]);
 
-module.exports = { authenticate };
+    if (checkForAdmin.rows.length <= 0) {
+      return res
+        .status(401)
+        .json({ success: false, message: "You are not an Admin" });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Admin Authentication Failed",
+    });
+  }
+};
+
+module.exports = { authenticate, isAdmin };

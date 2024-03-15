@@ -7,14 +7,15 @@ const {
 const {
   registerUser,
   loginUser,
-  deleteUsers,
-  updateUser,
   getAllUsers,
   getUserByUsername,
   getAllAgents,
   getAgentByUsername,
+  blockAgentByUsername,
+  deleteAgent,
+  updateAgent,
 } = require("../controllers/authController");
-const { authenticate } = require("../middleware.js/middleware");
+const { authenticate, isAdmin } = require("../middleware.js/middleware");
 const router = express.Router();
 
 router.get("/", (req, res) => {
@@ -28,22 +29,25 @@ router.post("/auth/users/login", loginUser);
 router.post("/auth/users/register", authenticate, registerUser);
 
 // GET ALL USERS
-router.get("/users", authenticate, getAllUsers);
+router.get("/users", isAdmin, getAllUsers);
 
 // GET A USER BY USERNAME
-router.get("/users/:username", authenticate, getUserByUsername);
+router.get("/users/:username", isAdmin, getUserByUsername);
 
 // GET ALL AGENTS
-router.get("/agents", authenticate, getAllAgents);
+router.get("/agents", isAdmin, getAllAgents);
 
 // GET AGENT BY USERNAME
-router.get("/agents/:username", authenticate, getAgentByUsername);
+router.get("/agents/:username", isAdmin, getAgentByUsername);
 
 // DELETE A USER BY USERNAME
-router.delete("/users/:username", authenticate, deleteUsers);
+router.delete("/agents/:username", isAdmin, deleteAgent);
 
 // UPDATE A USER BY USERNAME
-router.put("/users/:username", authenticate, updateUser);
+router.put("/agents/:username", isAdmin, updateAgent);
+
+// BLOCK AGENT BY USERNAME
+router.get("/disable/users/:username", isAdmin, blockAgentByUsername);
 
 // SEND A MESSAGE
 router.post("/send", authenticate, sendMessage);

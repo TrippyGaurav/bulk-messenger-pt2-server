@@ -43,7 +43,7 @@ const registerUser = async (req, res) => {
       const keyExists = await checkKeyExist(token);
 
       if (!keyExists) {
-        errors.push({ message: "Invalid key" });
+        errors.push({ message: "Invalid Authorization key" });
         return res.status(401).json({ errors });
       }
     } else {
@@ -87,9 +87,12 @@ const registerUser = async (req, res) => {
       role,
     ]);
 
-    return res.json({ success: true, message: "User registered successfully" });
+    return res.json({
+      success: true,
+      message: `${role} registered successfully`,
+    });
   } catch (error) {
-    console.log("Error registering user : ", error);
+    console.log("Error registering user : ", error.message);
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error" });
@@ -132,128 +135,124 @@ const loginUser = async (req, res) => {
     // If the passwords match, create a JWT token
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: "1h" }
+      process.env.JWT_SECRET_KEY
     );
 
     res.json({ success: true, message: "Login successful", token });
   } catch (error) {
-    console.error("Error during login:", error);
+    console.error("Error during login:", error.message);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
-// DELETE AGENTS
-const deleteUsers = async (req, res) => {
+// GET ALL AGENTS
+const getAllAgents = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1];
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    const admin = decodedToken.username;
-    const usernameToDelete = req.params.username;
+    const { rows } = await pool.query(queries.getAllAgents);
+    return res.status(200).json({ success: true, agents: rows });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(400)
+      .json({ success: false, message: "Failed to get agents" });
+  }
+};
 
-    console.log("Admin username:", admin);
-    console.log("Username to delete:", usernameToDelete);
-
-    const checkForAdmin = await pool.query(queries.checkForAdmin, [admin]);
-
-    if (checkForAdmin.rows.length <= 0) {
-      return res.status(401).json({
-        success: false,
-        message: "Only Admin can delete Agent's Account",
-      });
-    }
-
-    if (usernameToDelete === admin) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Cannot delete own Admin account" });
-    }
-
+// DELETE AGENTS
+const deleteAgent = async (req, res) => {
+  try {
+    const { username: usernameToDelete } = req.params;
     const { rows } = await pool.query(queries.deleteAgent, [usernameToDelete]);
 
     if (rows.length === 0) {
       return res
         .status(404)
-        .json({ success: false, message: "User not found" });
+        .json({ success: false, message: "Agent not found" });
     }
 
     return res
       .status(201)
-      .json({ success: true, message: "User deleted successfully" });
+      .json({ success: true, message: "Agent deleted successfully" });
   } catch (error) {
-    console.log("DELETE : ", error);
     return res
       .status(201)
-      .json({ success: false, message: "Unable to delete user" });
+      .json({ success: false, message: "Unable to delete agent" });
   }
 };
 
 // UPDATE AGENTS
-const updateUser = async (req, res) => {
+const updateAgent = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1];
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    const admin = decodedToken.username;
-    const usernameToUpdate = req.params.username;
+    const { username: agentToBeUpdated } = req.params;
     const { name, password, status } = req.body;
 
-    console.log("Admin username:", admin);
-    console.log("Username to update:", usernameToUpdate);
+    // Check if the agent to be updated exists
+    const agent = await pool.query(queries.checkAgentExist, [agentToBeUpdated]);
 
-    // Check if the requester is an admin
-    const checkForAdmin = await pool.query(queries.checkForAdmin, [admin]);
-
-    if (checkForAdmin.rows.length === 0) {
-      return res
-        .status(401)
-        .json({ success: false, message: "You are not an Admin" });
-    }
-
-    // Check if the admin is trying to update their own account
-    if (usernameToUpdate === admin) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Cannot update own Admin account" });
-    }
-
-    // Check if the user to be updated exists
-    const user = await pool.query(queries.checkUserExist, [usernameToUpdate]);
-
-    if (user.rows.length === 0) {
+    if (agent.rows.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
 
-    // Update user's name
+    // Update agent's name
     if (name) {
-      await pool.query(queries.updateUserName, [name, usernameToUpdate]);
+      await pool.query(queries.updateAgentName, [name, agentToBeUpdated]);
     }
 
-    // Update user's password if a new password is provided
+    // Update agent's password if a new password is provided
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      await pool.query(queries.updateUserPassword, [
+      await pool.query(queries.updateAgentPassword, [
         hashedPassword,
-        usernameToUpdate,
+        agentToBeUpdated,
       ]);
     }
 
-    // Update user's status if a new status is provided
+    // Update agents's status if a new status is provided
     if (status) {
-      await pool.query(queries.updateUserStatus, [status, usernameToUpdate]);
+      await pool.query(queries.updateAgentStatus, [status, agentToBeUpdated]);
     }
 
     return res
       .status(200)
-      .json({ success: true, message: "User updated successfully" });
+      .json({ success: true, message: "Agent updated successfully" });
   } catch (error) {
     console.error("Error updating user:", error);
     return res
       .status(500)
-      .json({ success: false, message: "Unable to update user" });
+      .json({ success: false, message: "Unable to update agent" });
   }
+};
+
+// GET AGENT BY USERNAME
+const getAgentByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { rows } = await pool.query(queries.getAgentByUsername, [username]);
+    return res.status(200).json({ success: true, agents: rows });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(400)
+      .json({ success: false, message: "Failed to get agent" });
+  }
+};
+
+// BLOCK AGENT
+const blockAgentByUsername = async (req, res) => {
+  try {
+    const { username: agentTobeBlocked } = req.params;
+
+    // Check if the agent to be updated exists
+    const agent = await pool.query(queries.checkAgentExist, [agentToBeUpdated]);
+    if (agent.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+  } catch (error) {}
 };
 
 // GET ALL USERS
@@ -262,7 +261,6 @@ const getAllUsers = async (req, res) => {
     const { rows } = await pool.query(queries.getAllUsers);
     return res.status(200).json({ success: true, users: rows });
   } catch (error) {
-    console.log(error);
     return res
       .status(400)
       .json({ success: false, message: "Failed to get users" });
@@ -283,40 +281,14 @@ const getUserByUsername = async (req, res) => {
   }
 };
 
-// GET ALL AGENTS
-const getAllAgents = async (req, res) => {
-  try {
-    const { rows } = await pool.query(queries.getAllAgents);
-    return res.status(200).json({ success: true, users: rows });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(400)
-      .json({ success: false, message: "Failed to get user" });
-  }
-};
-
-// GET AGENT BY USERNAME
-const getAgentByUsername = async (req, res) => {
-  try {
-    const { username } = req.params;
-    const { rows } = await pool.query(queries.getAgentByUsername, [username]);
-    return res.status(200).json({ success: true, users: rows });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(400)
-      .json({ success: false, message: "Failed to get user" });
-  }
-};
-
 module.exports = {
   registerUser,
   loginUser,
-  deleteUsers,
-  updateUser,
+  deleteAgent,
+  updateAgent,
   getAllUsers,
   getUserByUsername,
   getAllAgents,
   getAgentByUsername,
+  blockAgentByUsername,
 };

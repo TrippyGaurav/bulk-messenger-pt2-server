@@ -27,15 +27,16 @@ const checkForAdmin =
 const deleteAgent =
   "DELETE FROM users WHERE username = $1 AND role='agent' RETURNING *";
 
-const checkUserExist = "SELECT * FROM users WHERE username = $1";
+const checkAgentExist =
+  "SELECT * FROM users WHERE username = $1 AND role='agent'";
 
-const updateUserName =
+const updateAgentName =
   "UPDATE users SET name = $1 WHERE username = $2 AND role='agent'";
 
-const updateUserPassword =
+const updateAgentPassword =
   "UPDATE users SET password = $1 WHERE username = $2 AND role='agent'";
 
-const updateUserStatus =
+const updateAgentStatus =
   "UPDATE users SET status = $1 WHERE username = $2 AND role='agent'";
 
 const getAllUsers = "SELECT * FROM users";
@@ -61,10 +62,10 @@ module.exports = {
   facebookIfEntryExits,
   checkForAdmin,
   deleteAgent,
-  checkUserExist,
-  updateUserName,
-  updateUserPassword,
-  updateUserStatus,
+  checkAgentExist,
+  updateAgentName,
+  updateAgentPassword,
+  updateAgentStatus,
   getAllUsers,
   getAllAgents,
   getAgentByUsername,
