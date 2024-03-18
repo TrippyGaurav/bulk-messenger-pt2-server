@@ -41,7 +41,6 @@ const registerUser = async (req, res) => {
   try {
     if (role === "admin") {
       const keyExists = await checkKeyExist(token);
-
       if (!keyExists) {
         errors.push({ message: "Invalid Authorization key" });
         return res.status(401).json({ errors });
