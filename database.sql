@@ -1,6 +1,5 @@
 CREATE DATABASE bulk_messenger;
 
-
 CREATE TABLE messages (
     id SERIAL PRIMARY KEY,
     sent_to VARCHAR(255) NOT NULL,
@@ -12,7 +11,7 @@ CREATE TABLE messages (
 );
 
 CREATE TABLE users(
-    id SERIAL NOT NULL,
+    id SERIAL NOT NULL, 
     username VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -35,3 +34,9 @@ SELECT EXISTS (
 );
 
 
+CREATE TABLE keys(
+    id SERIAL NOT NULL,
+    key VARCHAR(255) PRIMARY KEY
+);
+
+INSERT INTO users (username, name, password, status, role) VALUES('mohit','Mohit','mohit99', 'active', 'admin');

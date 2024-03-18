@@ -21,22 +21,56 @@ const sentMessage = async (user, message, status, fbUsername, username) => {
 };
 
 const sendMessage = async (req, res) => {
-  const { message, userIds, fbUsername, fbPassword } = req.body;
-  const users = userIds.split(",");
-
-  const token = req.headers.authorization.split(" ")[1];
-  // Verify the token
-
   try {
+    const { message, userIds, fbUsername, fbPassword, interval, count } =
+      req.body;
+
+    if (
+      !message ||
+      !userIds ||
+      !fbUsername ||
+      !fbPassword ||
+      !interval ||
+      !count
+    ) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Please fill all fields" });
+    }
+    const users = userIds.split(",");
+
+    const token = req.headers.authorization.split(" ")[1];
     const facebookIdsTable = await checkTableExists("facebook_Ids");
     const tableExists = await checkTableExists("messages");
-
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    // Access the user information from the decoded token
     const userId = decodedToken.id;
     const username = decodedToken.username;
 
-    console.log("USER NAME : ", username);
+    if (facebookIdsTable) {
+      const entryExits = await pool.query(queries.facebookIfEntryExits, [
+        fbUsername,
+        username,
+      ]);
+
+      if (entryExits.rowCount <= 0) {
+        await pool.query(queries.addFacebookId, [fbUsername, username]);
+      }
+    } else {
+      await pool.query(queries.createfacebookIdsTable);
+      const entryExits = await pool.query(queries.facebookIfEntryExits, [
+        fbUsername,
+        username,
+      ]);
+
+      if (entryExits.rowCount <= 0) {
+        await pool.query(queries.addFacebookId, [fbUsername, username]);
+      }
+    }
+
+    if (!tableExists) {
+      console.log("Message Table Created");
+      await pool.query(queries.createMessageTable);
+    }
 
     let browser;
     try {
@@ -61,8 +95,8 @@ const sendMessage = async (req, res) => {
         return;
       }
 
-      for (let i = 0; i < users.length; i += 2) {
-        for (let j = i; j < i + 2 && j < users.length; j++) {
+      for (let i = 0; i < users.length; i += count) {
+        for (let j = i; j < i + count && j < users.length; j++) {
           const user = users[j];
           try {
             await page.goto(`https://mbasic.facebook.com/${user}`);
@@ -85,6 +119,7 @@ const sendMessage = async (req, res) => {
                 page.click('input[name="send"]'),
               ]);
             } catch (error) {
+              console.log(error.message);
               await Promise.all([
                 page.waitForNavigation(),
                 page.click('input[name="Send"]'),
@@ -97,34 +132,7 @@ const sendMessage = async (req, res) => {
               time: new Date().toISOString(),
             });
 
-            if (facebookIdsTable) {
-              const entryExits = await pool.query(
-                queries.facebookIfEntryExits,
-                [username]
-              );
-
-              if (entryExits.rowCount <= 0) {
-                await pool.query(queries.addFacebookId, [fbUsername, username]);
-              }
-            } else {
-              await pool.query(queries.createfacebookIdsTable);
-              const entryExits = await pool.query(
-                queries.facebookIfEntryExits,
-                [username]
-              );
-
-              if (entryExits.rowCount <= 0) {
-                await pool.query(queries.addFacebookId, [fbUsername, username]);
-              }
-            }
-
-            if (tableExists) {
-              sentMessage(user, message, "success", fbUsername, username);
-            } else {
-              console.log("Table not exists");
-              await pool.query(queries.createMessageTable);
-              sentMessage(user, message, "success", fbUsername, username);
-            }
+            sentMessage(user, message, "success", fbUsername, username);
           } catch (error) {
             console.log(error.message);
             sentMessage(user, message, "failed", fbUsername, username);
@@ -133,9 +141,11 @@ const sendMessage = async (req, res) => {
         }
 
         // If not all users have been processed, wait for 30 seconds before proceeding
-        if (i + 2 < users.length) {
-          console.log("Secheduled next 2 after 1mins");
-          await new Promise((resolve) => setTimeout(resolve, 60000));
+        if (i + count < users.length) {
+          console.log(
+            `Scheduled next ${count} after ${interval / 1000} seconds`
+          );
+          await new Promise((resolve) => setTimeout(resolve, interval));
         }
       }
 
@@ -149,13 +159,7 @@ const sendMessage = async (req, res) => {
       }
     }
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      // Token has expired, handle appropriately
-      res.status(401).json({ error: "Token expired. Please log in again." });
-    } else {
-      // Other JWT verification errors
-      res.status(401).json({ error: "Invalid token." });
-    }
+    res.status(401).json({ success: false, message: error.message });
   }
 };
 
