@@ -137,7 +137,12 @@ const loginUser = async (req, res) => {
       process.env.JWT_SECRET_KEY
     );
 
-    res.json({ success: true, message: "Login successful", token });
+    res.json({
+      success: true,
+      message: "Login successful",
+      token,
+      role: user.role,
+    });
   } catch (error) {
     console.error("Error during login:", error.message);
     res.status(500).json({ success: false, message: "Internal Server Error" });
