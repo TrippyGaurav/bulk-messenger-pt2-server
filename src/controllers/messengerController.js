@@ -151,7 +151,7 @@ const sendMessage = async (req, res) => {
 
       res.status(200).send({ message: "Message sent successfully" });
     } catch (error) {
-      console.log(console.error);
+      console.log(error);
       res
         .status(500)
         .send({ message: "Failed to send message", error: error.message });
