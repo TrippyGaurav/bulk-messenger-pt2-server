@@ -74,7 +74,7 @@ const sendMessage = async (req, res) => {
 
     let browser;
     try {
-      browser = await puppeteer.launch({ headless: false });
+      browser = await puppeteer.launch({ headless: true });
       const page = await browser.newPage();
 
       // Navigate to Facebook login Page
