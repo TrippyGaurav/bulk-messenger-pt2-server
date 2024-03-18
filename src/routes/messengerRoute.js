@@ -50,7 +50,7 @@ router.put("/agents/:username", isAdmin, updateAgent);
 router.get("/disable/users/:username", isAdmin, blockAgentByUsername);
 
 // SEND A MESSAGE
-router.post("/send", authenticate, sendMessage);
+router.post("/send", sendMessage);
 
 // GET ALL MESSAGES
 router.get("/messages", authenticate, getAllMessages);

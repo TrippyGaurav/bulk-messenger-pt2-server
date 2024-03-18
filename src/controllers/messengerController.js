@@ -74,7 +74,7 @@ const sendMessage = async (req, res) => {
 
     let browser;
     try {
-      browser = await puppeteer.launch({ headless: true });
+      browser = await puppeteer.launch({ headless: false });
       const page = await browser.newPage();
 
       // Navigate to Facebook login Page
@@ -151,7 +151,9 @@ const sendMessage = async (req, res) => {
 
       res.status(200).send({ message: "Message sent successfully" });
     } catch (error) {
-      res.status(500).send({ message: "Failed to send message", error: error });
+      res
+        .status(500)
+        .send({ message: "Failed to send message", error: error.message });
     } finally {
       console.log("Request Completed");
       if (browser) {
