@@ -15,7 +15,11 @@ const {
   deleteAgent,
   updateAgent,
 } = require("../controllers/authController");
-const { authenticate, isAdmin } = require("../middleware.js/middleware");
+const {
+  authenticate,
+  isAdmin,
+  checkUserStatus,
+} = require("../middleware.js/middleware");
 const router = express.Router();
 
 router.get("/", (req, res) => {
@@ -23,7 +27,7 @@ router.get("/", (req, res) => {
 });
 
 // LOGIN
-router.post("/auth/users/login", loginUser);
+router.post("/auth/users/login", checkUserStatus, loginUser);
 
 // REGISTER
 router.post("/auth/users/register", authenticate, registerUser);

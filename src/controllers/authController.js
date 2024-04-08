@@ -190,6 +190,8 @@ const updateAgent = async (req, res) => {
     const { username: agentToBeUpdated } = req.params;
     const { name, password, status } = req.body;
 
+    console.log("UPDATE USER : ", name, password, status);
+
     // Check if the agent to be updated exists
     const agent = await pool.query(queries.checkAgentExist, [agentToBeUpdated]);
 
