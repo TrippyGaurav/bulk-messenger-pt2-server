@@ -34,11 +34,14 @@ const isAdmin = async (req, res, next) => {
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const admin = decodedToken.username;
     const checkForAdmin = await pool.query(queries.checkForAdmin, [admin]);
+    console.log("CHECK FOR ADMIN : ", checkForAdmin.rows);
 
-    if (checkForAdmin.rows.length <= 0) {
+    if (checkForAdmin.rows[0].role != "admin") {
       return res
         .status(401)
         .json({ success: false, message: "You are not an Admin" });
+    } else {
+      console.log("You are admin");
     }
 
     next();
@@ -50,4 +53,33 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, isAdmin };
+const checkUserStatus = async (req, res, next) => {
+  const { username } = req.body;
+
+  try {
+    const result = await pool.query(
+      "SELECT status FROM users WHERE username = $1",
+      [username]
+    );
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const userStatus = result.rows[0].status;
+    if (userStatus === "inactive") {
+      return res.status(401).json({
+        success: false,
+        message: "User is inactive and cannot log in",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Error checking user status:", error.message);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+module.exports = { authenticate, isAdmin, checkUserStatus };
