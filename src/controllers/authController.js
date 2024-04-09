@@ -188,7 +188,7 @@ const deleteAgent = async (req, res) => {
 const updateAgent = async (req, res) => {
   try {
     const { username: agentToBeUpdated } = req.params;
-    const { name, password, status } = req.body;
+    const { name, username, password, status } = req.body;
 
     console.log("UPDATE USER : ", name, password, status);
 
@@ -219,6 +219,18 @@ const updateAgent = async (req, res) => {
     // Update agents's status if a new status is provided
     if (status) {
       await pool.query(queries.updateAgentStatus, [status, agentToBeUpdated]);
+    }
+
+    if (username) {
+      await pool.query(queries.updateAgentUsername, [
+        username,
+        agentToBeUpdated,
+      ]);
+
+      await pool.query(queries.updateMessageTableUsername, [
+        username,
+        agentToBeUpdated,
+      ]);
     }
 
     return res
